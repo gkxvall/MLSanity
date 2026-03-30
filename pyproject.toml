@@ -1,0 +1,33 @@
+[project]
+name = "mlsanity"
+version = "0.1.0"
+description = "Sanity-check your dataset before training your model."
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+    { name = "Your Name" }
+]
+license = { text = "MIT" }
+dependencies = [
+    "typer>=0.12.0",
+    "pandas>=2.2.0",
+    "pillow>=10.0.0",
+    "imagehash>=4.3.1",
+    "jinja2>=3.1.0",
+]
+
+[project.scripts]
+mlsanity = "mlsanity.cli:app"
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["mlsanity", "mlsanity.loaders", "mlsanity.checks", "mlsanity.reporting", "mlsanity.utils"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100

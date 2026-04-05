@@ -1,9 +1,12 @@
 import typer
+from pathlib import Path
 from typing import Optional
 
 from rich import box
 from rich.console import Console, Group
 from rich.panel import Panel
+from rich.progress import BarColumn, Progress, SpinnerColumn, TaskProgressColumn, TextColumn, TimeElapsedColumn
+from rich.table import Table
 from rich.text import Text
 
 from mlsanity.engine import run_scan
@@ -33,6 +36,40 @@ app = typer.Typer(
     rich_markup_mode="rich",
     pretty_exceptions_show_locals=False,
 )
+
+
+def _run_scan_with_progress(
+    console: Console,
+    *,
+    path: str,
+    dataset_type: str,
+    target: Optional[str],
+    split_column: Optional[str],
+):
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[bold blue]{task.description}"),
+        BarColumn(bar_width=None),
+        TaskProgressColumn(),
+        TimeElapsedColumn(),
+        console=console,
+        transient=True,
+    ) as progress:
+        task_id: int | None = None
+
+        def on_progress(completed: int, total: int, label: str) -> None:
+            nonlocal task_id
+            if task_id is None:
+                task_id = progress.add_task(label, total=total)
+            progress.update(task_id, completed=completed, total=total, description=label)
+
+        return run_scan(
+            path=path,
+            dataset_type=dataset_type,
+            target=target,
+            split_column=split_column,
+            progress=on_progress,
+        )
 
 
 @app.command(
@@ -97,20 +134,50 @@ def doctor(
           --json out.json --html out.html
     """
     console = Console()
-    report = run_scan(path=path, dataset_type=type, target=target, split_column=split_column)
+    report = _run_scan_with_progress(
+        console,
+        path=path,
+        dataset_type=type,
+        target=target,
+        split_column=split_column,
+    )
+
     print_report(report, console=console)
+
+    saved: list[tuple[str, str]] = []
     if json_out:
-        write_json_report(report, json_out)
-        console.print(
-            f"[bright_green]✓[/bright_green] [bold]JSON[/bold]  [dim]→[/dim] [cyan]{json_out}[/cyan]"
-        )
+        json_path = str(Path(json_out).expanduser().resolve())
+        write_json_report(report, json_path)
+        saved.append(("JSON", json_path))
     if html_out:
-        write_html_report(report, html_out)
-        console.print(
-            f"[bright_green]✓[/bright_green] [bold]HTML[/bold]  [dim]→[/dim] [cyan]{html_out}[/cyan]"
-        )
-    if json_out or html_out:
+        html_path = str(Path(html_out).expanduser().resolve())
+        write_html_report(report, html_path)
+        saved.append(("HTML", html_path))
+
+    if saved:
+        table = Table(show_header=True, header_style="bold", box=box.SIMPLE, padding=(0, 1))
+        table.add_column("Format", style="cyan", no_wrap=True)
+        table.add_column("Saved to (absolute path)", overflow="fold")
+
+        for fmt, abs_path in saved:
+            table.add_row(fmt, abs_path)
+
         console.print()
+        console.print(
+            Panel(
+                table,
+                title="[bold green]Reports saved[/bold green]",
+                border_style="green",
+                box=box.ROUNDED,
+            )
+        )
+    else:
+        console.print()
+        console.print(
+            "[dim]No report files written. Use [cyan]--json PATH[/cyan] and/or [cyan]--html PATH[/cyan] to save.[/dim]"
+        )
+
+    console.print()
 
 
 @app.command(

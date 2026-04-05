@@ -1,0 +1,5 @@
+feature_a,feature_b,target,split
+1.0,10.0,cat,train
+2.0,20.0,dog,train
+1.5,15.0,cat,val
+3.0,30.0,dog,test

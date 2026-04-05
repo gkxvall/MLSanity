@@ -1,20 +1,66 @@
+# Bytecode
 __pycache__/
 *.py[cod]
 *$py.class
 
+# Tests / coverage
 .pytest_cache/
-.ruff_cache/
-.mypy_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
 
+# Type check / lint caches
+.mypy_cache/
+.ruff_cache/
+.dmypy.json
+
+# Virtual environments
 .venv/
 venv/
 ENV/
 env/
+.python-version
 
+# Build / packaging
 build/
 dist/
+*.egg
 *.egg-info/
+pip-wheel-metadata/
+*.manifest
+*.spec
 
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# OS / editors
 .DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
 
+# Jupyter
 .ipynb_checkpoints/
+
+# Local env / secrets
+.env
+.env.*
+!.env.example
+
+# Logs & databases
+*.log
+*.sqlite
+*.db
+
+# Cursor / tooling (optional local state)
+.cursor/

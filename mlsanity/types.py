@@ -29,3 +29,4 @@ class Report:
     checks: list[CheckResult]
     health_score: int
     overall_status: str
+    dataset_path: str = ""

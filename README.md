@@ -17,7 +17,7 @@
 
 MLSanity is an open-source **dataset sanity-checking** toolkit for **image classification** folders and **tabular CSV** files. Run one command, get a **colorized terminal summary**, optional **JSON** and **HTML** reports, and a simple **health score** so you catch data issues before you waste GPU time.
 
-**Current release:** `v0.1.0` (MVP)
+**Current release:** `v0.1.1` (MVP)
 
 ## Why MLSanity?
 

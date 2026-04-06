@@ -5,7 +5,7 @@ description = "Sanity-check your dataset before training your model."
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [
-    { name = "Your Name" }
+    { name = "Vall" }
 ]
 license = { text = "MIT" }
 dependencies = [

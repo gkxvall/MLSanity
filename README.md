@@ -76,7 +76,7 @@ flowchart LR
 ## Install
 
 ```bash
-git clone https://github.com/<your-username>/MLSanity.git
+git clone https://github.com/gkxvall/MLSanity.git
 cd MLSanity
 python -m pip install -e .
 ```

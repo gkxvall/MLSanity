@@ -13,16 +13,39 @@ def run_tabular_schema_check(
     split_column: str | None = None,
 ) -> CheckResult:
     path = Path(csv_path).expanduser().resolve()
-    if not path.is_file() or path.suffix.lower() != ".csv":
+    if not path.is_file():
         return CheckResult(
             name="schema",
             status="error",
-            summary="Schema check requires a valid CSV file path.",
+            summary="Schema check requires a valid tabular file path.",
             details={},
             suggestions=[],
         )
 
-    df = pd.read_csv(path)
+    suffix = path.suffix.lower()
+    try:
+        if suffix == ".csv":
+            df = pd.read_csv(path)
+        elif suffix == ".tsv":
+            df = pd.read_csv(path, sep="\t")
+        elif suffix == ".parquet":
+            df = pd.read_parquet(path)
+        else:
+            return CheckResult(
+                name="schema",
+                status="error",
+                summary="Schema check supports .csv, .tsv, and .parquet files only.",
+                details={"path_suffix": suffix},
+                suggestions=["Convert your dataset to one of the supported formats."],
+            )
+    except ImportError as e:
+        return CheckResult(
+            name="schema",
+            status="error",
+            summary=f"Failed to read '{csv_path}' due to missing Parquet dependency.",
+            details={"error": str(e)},
+            suggestions=["Install a Parquet engine such as 'pyarrow'.", "Try exporting again and re-run MLSanity."],
+        )
 
     if target_column not in df.columns:
         return CheckResult(

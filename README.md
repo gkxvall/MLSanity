@@ -17,7 +17,7 @@
 
 MLSanity is an open-source **dataset sanity-checking** toolkit for **image classification** folders and **tabular CSV** files. Run one command, get a **colorized terminal summary**, optional **JSON** and **HTML** reports, and a simple **health score** so you catch data issues before you waste GPU time.
 
-**Current release:** `v0.1.1` (MVP)
+**Current release:** `v0.2.0` (MVP)
 
 ## Why MLSanity?
 
@@ -30,7 +30,7 @@ MLSanity is an open-source **dataset sanity-checking** toolkit for **image class
 
 ## Features at a glance
 
-| Capability                                                 | v0.1          |
+| Capability                                                 | v0.2          |
 | ---------------------------------------------------------- | ------------- |
 | Image classification folders (split-based or flat classes) | Yes           |
 | Tabular CSV with `--target` (optional `--split-column`)    | Yes           |
@@ -38,7 +38,7 @@ MLSanity is an open-source **dataset sanity-checking** toolkit for **image class
 | Schema + tabular duplicates + leakage                      | Yes           |
 | Terminal (Rich), JSON, HTML reports                        | Yes           |
 | Train/val **leakage** when splits exist                    | Yes           |
-| Web dashboard, plugins, auto-fix                           | _Not in v0.1_ |
+| Web dashboard, plugins, auto-fix                           | _Not in v0.2_ |
 
 ## How it works
 
@@ -76,7 +76,7 @@ flowchart LR
 ## Install
 
 ```bash
-git clone https://github.com/gkxvall/MLSanity.git
+git clone https://github.com/<your-username>/MLSanity.git
 cd MLSanity
 python -m pip install -e .
 ```
@@ -139,7 +139,7 @@ dataset/
   dog/
 ```
 
-## What v0.1 checks
+## What v0.2 checks
 
 | Area    | Check             | What it does                                              |
 | ------- | ----------------- | --------------------------------------------------------- |
@@ -149,10 +149,12 @@ dataset/
 | Images  | `imbalance`       | Class counts, %, imbalance ratio                          |
 | Images  | `leakage`         | Same file hash in **more than one split**                 |
 | Images  | `leakage_near`    | Near-duplicate **pairs across splits**                    |
+| Images  | `label_hints`     | Heuristic hints for likely label issues (not definitive) |
 | Tabular | `schema`          | Missing values, empty columns, constant columns           |
 | Tabular | `duplicates`      | Exact duplicate rows; conflicting labels on same features |
 | Tabular | `imbalance`       | Same metrics on the **target** column                     |
 | Tabular | `leakage`         | Same **feature row** under **more than one split**        |
+| Tabular | `label_hints`     | Heuristic hints for likely label issues (not definitive) |
 
 If there are **no splits** (e.g. flat image layout), cross-split leakage checks return **OK** with a short “skipped” explanation.
 
@@ -169,6 +171,7 @@ The score starts at **100** and applies **penalties** for warnings/errors from c
 | `near_duplicates`              | −10             |
 | `imbalance`                    | −15             |
 | `schema`                       | −10 / −15       |
+| `label_hints`                  | −5              |
 
 | Score  | `overall_status`  |
 | ------ | ----------------- |
@@ -184,6 +187,14 @@ The score starts at **100** and applies **penalties** for warnings/errors from c
 | **Terminal** | Fast feedback; colored summary in your shell |
 | **JSON**     | Scripts, CI, dashboards, custom tooling      |
 | **HTML**     | Sharing with teammates; opening in a browser |
+
+## v0.2 additions (beyond v0.1)
+
+- **Suspicious-label hints**: `label_hints` check (heuristic hints, status `warning`).
+- **Dataset comparison mode**: `mlsanity compare OLD_PATH NEW_PATH ...` with terminal + JSON + HTML compare reports.
+- **CI-friendly quality gates**: `--min-score` and `--fail-on warning|error` (non-zero exit code + pass/fail fields in JSON).
+- **Tabular formats**: tabular loader supports **CSV**, **TSV**, and **Parquet** (`.parquet` requires a Parquet engine like `pyarrow`).
+- **Richer report visuals**: HTML report now shows class distribution and split distribution charts, plus “what to fix first”.
 
 ## Project layout
 
@@ -211,10 +222,10 @@ python -m pip install pytest
 python -m pytest tests/ -v
 ```
 
-## Roadmap (not v0.1)
+## Roadmap (not v0.2)
 
-- Suspicious-label hints, dataset **comparison** mode, richer plots in reports
-- Hugging Face / more formats, CI integrations — see project issues when published
+- Web dashboard / plugins / auto-fix UI
+- More formats and deeper diagnostics (tracked in project issues once published)
 
 ## License
 

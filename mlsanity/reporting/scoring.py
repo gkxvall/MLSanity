@@ -23,6 +23,9 @@ def compute_health_score_and_status(checks: list[CheckResult]) -> tuple[int, str
             score -= 15
         elif name == "schema":
             score -= 15 if c.status == "error" else 10
+        elif name == "label_hints":
+            # Label hints are uncertainty signals, not definitive errors.
+            score -= 5 if c.status == "warning" else 10
 
     score = max(0, min(100, score))
 

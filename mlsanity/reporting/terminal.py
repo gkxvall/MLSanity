@@ -104,6 +104,27 @@ def print_report(report: Report, *, console: Console | None = None) -> None:
         for s in c.suggestions[:4]:
             checks_table.add_row("", "", f"[dim]↳[/dim] [dim]{s}[/dim]")
 
+        if c.name == "label_hints":
+            candidates = []
+            if isinstance(c.details, dict):
+                candidates = c.details.get("candidates", [])
+            if isinstance(candidates, list) and candidates:
+                for idx, cand in enumerate(candidates[:5]):
+                    if not isinstance(cand, dict):
+                        continue
+                    sid = cand.get("sample_id", "")
+                    cur = cand.get("current_label", "")
+                    sus = cand.get("suspected_label", "")
+                    score = cand.get("score", "")
+                    reason = cand.get("reason", "")
+                    checks_table.add_row(
+                        "",
+                        "",
+                        f"[dim]• {sid}[/dim] [dim]{cur}[/dim]→[dim]{sus}[/dim] [dim](score={score})[/dim]",
+                    )
+                    if idx == 0 and isinstance(reason, str) and reason:
+                        checks_table.add_row("", "", f"[dim]  reason: {reason[:90]}[/dim]")
+
     con.print()
     con.print(
         Panel(

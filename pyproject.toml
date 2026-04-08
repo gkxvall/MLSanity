@@ -1,11 +1,11 @@
 [project]
 name = "mlsanity"
-version = "0.1.1"
+version = "0.2.0"
 description = "Sanity-check your dataset before training your model."
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [
-    { name = "Vall" }
+    { name = "Your Name" }
 ]
 license = { text = "MIT" }
 dependencies = [

@@ -22,6 +22,14 @@ def test_tabular_scan_minimal(tmp_path: Path) -> None:
     assert "leakage" in names
 
 
+def test_tabular_scan_tsv_supported(tmp_path: Path) -> None:
+    tsv_path = tmp_path / "data.tsv"
+    tsv_path.write_text("f1\tf2\ttarget\n1\t2\tA\n3\t4\tB\n", encoding="utf-8")
+    report = run_scan(str(tsv_path), "tabular", target="target")
+    assert report.dataset_type == "tabular"
+    assert report.total_samples == 2
+
+
 def test_image_scan_empty_class_folder(tmp_path: Path) -> None:
     (tmp_path / "train" / "cat").mkdir(parents=True)
     report = run_scan(str(tmp_path), "image")
@@ -35,6 +43,18 @@ def test_tabular_requires_target(tmp_path: Path) -> None:
     csv_path.write_text("a,b\n1,2\n", encoding="utf-8")
     with pytest.raises(ValueError, match="target"):
         run_scan(str(csv_path), "tabular")
+
+
+def test_tabular_scan_parquet_supported(tmp_path: Path) -> None:
+    pytest.importorskip("pyarrow")
+    import pandas as pd
+
+    parquet_path = tmp_path / "data.parquet"
+    df = pd.DataFrame({"f1": [1, 3], "f2": [2, 4], "target": ["A", "B"]})
+    df.to_parquet(parquet_path)
+
+    report = run_scan(str(parquet_path), "tabular", target="target")
+    assert report.total_samples == 2
 
 
 def test_report_to_dict_roundtrip_keys() -> None:

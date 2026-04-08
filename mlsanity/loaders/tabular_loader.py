@@ -19,11 +19,19 @@ def load_tabular_csv_dataset(
     if not path.exists():
         raise FileNotFoundError(f"CSV path does not exist: {csv_path}")
     if not path.is_file():
-        raise ValueError(f"CSV path must be a file: {csv_path}")
-    if path.suffix.lower() != ".csv":
-        raise ValueError(f"Expected a CSV file (.csv), got: {csv_path}")
+        raise ValueError(f"Tabular path must be a file: {csv_path}")
 
-    df = pd.read_csv(path)
+    suffix = path.suffix.lower()
+    if suffix not in {".csv", ".tsv", ".parquet"}:
+        raise ValueError(f"Expected a tabular file (.csv/.tsv/.parquet), got: {csv_path}")
+
+    if suffix == ".csv":
+        df = pd.read_csv(path)
+    elif suffix == ".tsv":
+        df = pd.read_csv(path, sep="\t")
+    else:
+        # parquet
+        df = pd.read_parquet(path)
 
     if target_column not in df.columns:
         raise ValueError(f"Missing required target column: '{target_column}'")

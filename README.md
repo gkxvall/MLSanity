@@ -15,7 +15,7 @@
 
 ---
 
-MLSanity is an open-source **dataset sanity-checking** toolkit for **image classification** folders and **tabular CSV** files. Run one command, get a **colorized terminal summary**, optional **JSON** and **HTML** reports, and a simple **health score** so you catch data issues before you waste GPU time.
+MLSanity is an open-source **dataset sanity-checking** toolkit for **image classification** folders and **tabular CSV** files. Run one command, get a **Detailed terminal summary**, optional **JSON** and **HTML** reports, and a simple **health score** so you catch data issues before you waste GPU time.
 
 **Current release:** `v0.2.0` (MVP)
 
@@ -76,7 +76,7 @@ flowchart LR
 ## Install
 
 ```bash
-git clone https://github.com/<your-username>/MLSanity.git
+git clone https://github.com/gkxvall/MLSanity.git
 cd MLSanity
 python -m pip install -e .
 ```
@@ -149,12 +149,12 @@ dataset/
 | Images  | `imbalance`       | Class counts, %, imbalance ratio                          |
 | Images  | `leakage`         | Same file hash in **more than one split**                 |
 | Images  | `leakage_near`    | Near-duplicate **pairs across splits**                    |
-| Images  | `label_hints`     | Heuristic hints for likely label issues (not definitive) |
+| Images  | `label_hints`     | Heuristic hints for likely label issues (not definitive)  |
 | Tabular | `schema`          | Missing values, empty columns, constant columns           |
 | Tabular | `duplicates`      | Exact duplicate rows; conflicting labels on same features |
 | Tabular | `imbalance`       | Same metrics on the **target** column                     |
 | Tabular | `leakage`         | Same **feature row** under **more than one split**        |
-| Tabular | `label_hints`     | Heuristic hints for likely label issues (not definitive) |
+| Tabular | `label_hints`     | Heuristic hints for likely label issues (not definitive)  |
 
 If there are **no splits** (e.g. flat image layout), cross-split leakage checks return **OK** with a short “skipped” explanation.
 

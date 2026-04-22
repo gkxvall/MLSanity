@@ -1,1130 +1,450 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>MLSanity — Dataset report</title>
-  <style>
-    :root {
-      --bg: #0b1020;
-      --panel: #12192b;
-      --panel-2: #0f1727;
-      --panel-3: #0c1422;
-      --line: rgba(148, 163, 184, 0.16);
-      --line-strong: rgba(148, 163, 184, 0.28);
-      --text: #e7edf7;
-      --muted: #94a3b8;
-      --ok: #34d399;
-      --warn: #fbbf24;
-      --err: #f87171;
-      --accent: #60a5fa;
-      --accent-2: #818cf8;
-      --shadow: 0 10px 26px rgba(2, 6, 23, 0.26);
-      --radius: 12px;
-    }
-
-    * { box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
-
-    body {
-      margin: 0;
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background:
-        radial-gradient(circle at top left, rgba(96, 165, 250, 0.08), transparent 20%),
-        linear-gradient(180deg, #0a1020 0%, #0b1020 100%);
-      color: var(--text);
-      font-size: 14px;
-      line-height: 1.45;
-    }
-
-    .page {
-      max-width: 1160px;
-      margin: 0 auto;
-      padding: 18px 16px 28px;
-    }
-
-    .topbar {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-end;
-      gap: 12px;
-      flex-wrap: wrap;
-      margin-bottom: 14px;
-    }
-
-    .title h1 {
-      margin: 0;
-      font-size: 1.22rem;
-      letter-spacing: -0.03em;
-      font-weight: 700;
-    }
-
-    .title p {
-      margin: 4px 0 0;
-      color: var(--muted);
-      font-size: 0.82rem;
-    }
-
-    .anchors {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-
-    .anchors a {
-      color: var(--muted);
-      text-decoration: none;
-      padding: 6px 10px;
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      background: rgba(255,255,255,0.02);
-      font-size: 0.76rem;
-    }
-
-    .anchors a:hover {
-      color: var(--text);
-      border-color: var(--line-strong);
-    }
-
-    .summary-grid {
-      display: grid;
-      grid-template-columns: 1.4fr 1fr;
-      gap: 12px;
-      margin-bottom: 12px;
-    }
-
-    @media (max-width: 920px) {
-      .summary-grid { grid-template-columns: 1fr; }
-    }
-
-    .card,
-    details.section,
-    details.check {
-      background: linear-gradient(180deg, var(--panel) 0%, var(--panel-2) 100%);
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-    }
-
-    .card-body {
-      padding: 14px;
-    }
-
-    .overview {
-      display: grid;
-      grid-template-columns: 150px 1fr;
-      gap: 16px;
-      align-items: center;
-    }
-
-    @media (max-width: 720px) {
-      .overview { grid-template-columns: 1fr; }
-    }
-
-    .ring-wrap {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .ring {
-      --pct: {{ report.health_score }};
-      width: 132px;
-      height: 132px;
-      min-width: 132px;
-      min-height: 132px;
-      border-radius: 50%;
-      display: grid;
-      place-items: center;
-      background:
-        radial-gradient(circle closest-side, var(--panel-2) 66%, transparent 67% 100%),
-        conic-gradient(
-          {% if report.overall_status == 'healthy' %}var(--ok)
-          {% elif report.overall_status == 'acceptable' %}var(--accent)
-          {% elif report.overall_status == 'needs_attention' %}var(--warn)
-          {% else %}var(--err)
-          {% endif %} calc(var(--pct) * 1%),
-          rgba(148, 163, 184, 0.16) 0
-        );
-      border: 1px solid var(--line);
-      flex: 0 0 auto;
-    }
-
-    .ring .inner {
-      width: 82px;
-      height: 82px;
-      border-radius: 50%;
-      background: var(--panel-2);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .ring .score {
-      font-size: 2rem;
-      font-weight: 800;
-      line-height: 1;
-      letter-spacing: -0.05em;
-    }
-
-    .ring-label {
-      color: var(--muted);
-      font-size: 0.68rem;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-    }
-
-    .meta {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 8px;
-    }
-
-    @media (max-width: 720px) {
-      .meta { grid-template-columns: 1fr; }
-    }
-
-    .meta-item,
-    .mini {
-      padding: 10px;
-      border-radius: 10px;
-      background: rgba(255,255,255,0.02);
-      border: 1px solid var(--line);
-    }
-
-    .meta-item .k,
-    .mini .k,
-    .detail-box .label {
-      color: var(--muted);
-      font-size: 0.64rem;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      margin-bottom: 5px;
-    }
-
-    .meta-item .v {
-      font-size: 0.88rem;
-      font-weight: 600;
-      word-break: break-word;
-    }
-
-    .tiny-grid {
-      display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
-      gap: 8px;
-      margin-top: 10px;
-    }
-
-    @media (max-width: 900px) {
-      .tiny-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-    }
-
-    @media (max-width: 600px) {
-      .tiny-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    }
-
-    .mini .v {
-      font-size: 0.9rem;
-      font-weight: 700;
-    }
-
-    .status-healthy { color: var(--ok); }
-    .status-acceptable { color: var(--accent); }
-    .status-needs_attention { color: var(--warn); }
-    .status-critical { color: var(--err); }
-
-    details.section,
-    details.check {
-      overflow: hidden;
-    }
-
-    details.section + details.section,
-    details.check + details.check {
-      margin-top: 10px;
-    }
-
-    summary.section-head,
-    summary.check-head {
-      list-style: none;
-      cursor: pointer;
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto auto;
-      gap: 10px;
-      align-items: center;
-      padding: 12px 14px;
-    }
-
-    summary.section-head::-webkit-details-marker,
-    summary.check-head::-webkit-details-marker {
-      display: none;
-    }
-
-    .head-title {
-      font-size: 0.9rem;
-      font-weight: 700;
-      letter-spacing: -0.01em;
-    }
-
-    .head-sub {
-      margin-top: 2px;
-      color: var(--muted);
-      font-size: 0.77rem;
-    }
-
-    .count {
-      color: var(--muted);
-      font-size: 0.73rem;
-      padding: 4px 8px;
-      border-radius: 999px;
-      border: 1px solid var(--line);
-      background: rgba(255,255,255,0.02);
-    }
-
-    .chev {
-      color: var(--muted);
-      font-size: 0.88rem;
-      transition: transform 0.18s ease;
-    }
-
-    details[open] > summary .chev {
-      transform: rotate(180deg);
-    }
-
-    .section-body,
-    .check-body {
-      padding: 0 14px 14px;
-      border-top: 1px solid var(--line);
-      background: rgba(255,255,255,0.012);
-    }
-
-    .priority-list {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      padding-top: 12px;
-    }
-
-    .priority-item {
-      padding: 11px 12px;
-      border-radius: 10px;
-      background: rgba(255,255,255,0.02);
-      border: 1px solid var(--line);
-      border-left: 4px solid rgba(148, 163, 184, 0.24);
-    }
-
-    .priority-item.warning { border-left-color: var(--warn); }
-    .priority-item.error { border-left-color: var(--err); }
-
-    .priority-top {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-bottom: 4px;
-    }
-
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      padding: 3px 8px;
-      border-radius: 999px;
-      font-size: 0.65rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      border: 1px solid transparent;
-    }
-
-    .badge-ok { background: rgba(52, 211, 153, 0.12); color: var(--ok); border-color: rgba(52, 211, 153, 0.22); }
-    .badge-warning { background: rgba(251, 191, 36, 0.12); color: var(--warn); border-color: rgba(251, 191, 36, 0.22); }
-    .badge-error { background: rgba(248, 113, 113, 0.12); color: var(--err); border-color: rgba(248, 113, 113, 0.22); }
-
-    .muted {
-      color: var(--muted);
-      font-size: 0.78rem;
-    }
-
-    .suggest {
-      margin: 7px 0 0 1rem;
-      color: var(--muted);
-      font-size: 0.78rem;
-      padding: 0;
-    }
-
-    .suggest li + li { margin-top: 4px; }
-
-    .checks-wrap {
-      padding-top: 12px;
-    }
-
-    .detail-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 8px;
-      margin-top: 10px;
-    }
-
-    @media (max-width: 760px) {
-      .detail-grid { grid-template-columns: 1fr; }
-      summary.section-head,
-      summary.check-head { grid-template-columns: minmax(0, 1fr) auto; }
-      .chev { display: none; }
-    }
-
-    .detail-box {
-      padding: 10px;
-      border-radius: 10px;
-      background: rgba(255,255,255,0.02);
-      border: 1px solid var(--line);
-    }
-
-    .detail-box .value {
-      font-size: 0.8rem;
-      word-break: break-word;
-    }
-
-    .code-wrap {
-      position: relative;
-      margin-top: 7px;
-    }
-
-    .copy-btn {
-      position: absolute;
-      top: 8px;
-      right: 8px;
-      border: 1px solid var(--line);
-      background: rgba(255,255,255,0.04);
-      color: var(--muted);
-      border-radius: 8px;
-      font-size: 0.68rem;
-      padding: 4px 8px;
-      cursor: pointer;
-      transition: 0.18s ease;
-      z-index: 2;
-    }
-
-    .copy-btn:hover {
-      color: var(--text);
-      border-color: var(--line-strong);
-      background: rgba(255,255,255,0.08);
-    }
-
-    .code-block {
-      margin-top: 7px;
-      padding: 10px;
-      padding-top: 34px;
-      border-radius: 10px;
-      border: 1px solid var(--line);
-      background: rgba(2, 6, 23, 0.28);
-      color: #dbe6f5;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      font-size: 0.73rem;
-      line-height: 1.45;
-      white-space: pre-wrap;
-      word-break: break-word;
-      overflow-wrap: anywhere;
-      max-height: 220px;
-      overflow: auto;
-    }
-
-    .chips {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-top: 7px;
-    }
-
-    .chip {
-      display: inline-flex;
-      align-items: center;
-      padding: 4px 8px;
-      border-radius: 999px;
-      font-size: 0.72rem;
-      border: 1px solid var(--line);
-      background: rgba(255,255,255,0.03);
-      color: var(--text);
-    }
-
-    .table-wrap {
-      overflow: auto;
-      margin-top: 10px;
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      background: rgba(255,255,255,0.02);
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      min-width: 620px;
-      background: transparent;
-    }
-
-    th, td {
-      text-align: left;
-      padding: 9px 10px;
-      border-bottom: 1px solid rgba(148, 163, 184, 0.12);
-      vertical-align: top;
-      font-size: 0.78rem;
-    }
-
-    th {
-      color: var(--muted);
-      font-size: 0.66rem;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      background: rgba(255,255,255,0.03);
-      position: sticky;
-      top: 0;
-    }
-
-    tr:last-child td { border-bottom: 0; }
-
-    .graph-wrap {
-      padding-top: 12px;
-    }
-
-    .graph-title {
-      color: var(--muted);
-      font-size: 0.77rem;
-      margin-bottom: 10px;
-    }
-
-    .dist-head {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    .view-toggle {
-      display: inline-flex;
-      gap: 6px;
-      padding: 4px;
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      background: rgba(255,255,255,0.02);
-    }
-
-    .view-toggle button {
-      border: 0;
-      background: transparent;
-      color: var(--muted);
-      font-size: 0.72rem;
-      padding: 6px 10px;
-      border-radius: 999px;
-      cursor: pointer;
-      transition: 0.18s ease;
-    }
-
-    .view-toggle button.active {
-      background: rgba(96, 165, 250, 0.16);
-      color: var(--text);
-    }
-
-    .class-view,
-    .split-view {
-      display: none;
-    }
-
-    .class-view.active,
-    .split-view.active {
-      display: block;
-    }
-
-    .svg-card {
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      background: rgba(255,255,255,0.02);
-      padding: 12px;
-      overflow: auto;
-    }
-
-    .chart-scroller {
-      overflow-x: auto;
-      overflow-y: hidden;
-      padding-bottom: 6px;
-    }
-
-    .chart-svg {
-      display: block;
-      height: 340px;
-    }
-
-    footer {
-      margin-top: 18px;
-      text-align: center;
-      color: var(--muted);
-      font-size: 0.74rem;
-    }
-  </style>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: { extend: { colors: { primary: '#3b82f6', success: '#22c55e', warning: '#eab308', error: '#ef4444', darkBg: '#0f172a', darkCard: '#1e293b', darkBorder: '#334155' } } }
+    }
+  </script>
+  
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/gridjs/dist/theme/mermaid.min.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/gridjs/dist/gridjs.umd.js"></script>
 </head>
-
-<script>
-  function setDistributionView(mode) {
-    const classGraphView = document.getElementById("classGraphView");
-    const classJsonView = document.getElementById("classJsonView");
-    const splitGraphView = document.getElementById("splitGraphView");
-    const splitJsonView = document.getElementById("splitJsonView");
-
-    const graphBtns = document.querySelectorAll(".distribution-graph-btn");
-    const jsonBtns = document.querySelectorAll(".distribution-json-btn");
-
-    if (mode === "json") {
-      if (classGraphView) classGraphView.classList.remove("active");
-      if (classJsonView) classJsonView.classList.add("active");
-      if (splitGraphView) splitGraphView.classList.remove("active");
-      if (splitJsonView) splitJsonView.classList.add("active");
-
-      graphBtns.forEach(btn => btn.classList.remove("active"));
-      jsonBtns.forEach(btn => btn.classList.add("active"));
-    } else {
-      if (classJsonView) classJsonView.classList.remove("active");
-      if (classGraphView) classGraphView.classList.add("active");
-      if (splitJsonView) splitJsonView.classList.remove("active");
-      if (splitGraphView) splitGraphView.classList.add("active");
-
-      jsonBtns.forEach(btn => btn.classList.remove("active"));
-      graphBtns.forEach(btn => btn.classList.add("active"));
-    }
-  }
-
-  async function copyCode(button) {
-    const wrap = button.closest(".code-wrap");
-    if (!wrap) return;
-    const code = wrap.querySelector(".code-block");
-    if (!code) return;
-
-    const text = code.innerText;
-    try {
-      await navigator.clipboard.writeText(text);
-      const old = button.innerText;
-      button.innerText = "Copied";
-      setTimeout(() => {
-        button.innerText = old;
-      }, 1200);
-    } catch (e) {
-      button.innerText = "Failed";
-      setTimeout(() => {
-        button.innerText = "Copy";
-      }, 1200);
-    }
-  }
-</script>
-
-<body>
-  <div class="page">
-    <div class="topbar">
-      <div class="title">
-        <h1>MLSanity dataset report</h1>
-        <p>Minimal, dense, and readable. Built to show findings clearly without dashboard clutter.</p>
+<body class="bg-gray-50 text-gray-900 dark:bg-darkBg dark:text-gray-100 font-sans transition-colors duration-200">
+  
+  <header class="sticky top-0 z-50 border-b border-gray-200 dark:border-darkBorder bg-white/80 dark:bg-darkCard/80 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
+      <div class="flex items-center gap-3 font-bold text-sm tracking-tight">
+        <div class="w-7 h-7 rounded-md bg-primary text-white flex items-center justify-center">⚡</div>
+        <span>MLSanity</span>
       </div>
-      <div class="anchors">
-        <a href="#overview">Overview</a>
-        <a href="#distributions">Distributions</a>
-        <a href="#priorities">Priorities</a>
-        <a href="#checks">Checks</a>
-      </div>
+      <nav class="flex items-center gap-1">
+        <button class="nav-btn active px-3 py-1.5 rounded-lg text-sm font-semibold text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800 transition" data-target="overviewPage">Overview</button>
+        <button class="nav-btn px-3 py-1.5 rounded-lg text-sm font-semibold text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800 transition" data-target="distributionPage">Distribution</button>
+        <button class="nav-btn px-3 py-1.5 rounded-lg text-sm font-semibold text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800 transition" data-target="checksPage">Checks</button>
+      </nav>
+      <button id="themeToggle" class="p-2 rounded-lg bg-gray-200 dark:bg-slate-800 text-gray-600 dark:text-gray-300 text-xs font-bold">Toggle Mode</button>
     </div>
+  </header>
 
-    {% set ns = namespace(ok=0, warning=0, error=0) %}
-    {% for c in report.checks %}
-      {% if c.status == 'ok' %}
-        {% set ns.ok = ns.ok + 1 %}
-      {% elif c.status == 'warning' %}
-        {% set ns.warning = ns.warning + 1 %}
-      {% elif c.status == 'error' %}
-        {% set ns.error = ns.error + 1 %}
-      {% endif %}
-    {% endfor %}
+  {% set ns = namespace(ok=0, warning=0, error=0) %}
+  {% for c in report.checks %}
+    {% if c.status == 'ok' %}{% set ns.ok = ns.ok + 1 %}
+    {% elif c.status == 'warning' %}{% set ns.warning = ns.warning + 1 %}
+    {% elif c.status == 'error' %}{% set ns.error = ns.error + 1 %}{% endif %}
+  {% endfor %}
+  {% set total_checks = (report.checks|length) if report.checks|length else 1 %}
 
-    <div class="summary-grid" id="overview">
-      <div class="card">
-        <div class="card-body">
-          <div class="overview">
-            <div class="ring-wrap">
-              <div class="ring" aria-label="Health score gauge" role="img">
-                <div class="inner">
-                  <span class="score status-{{ report.overall_status }}">{{ report.health_score }}</span>
-                </div>
-              </div>
-              <div class="ring-label">Health score</div>
-            </div>
-            <div>
-              <div class="meta">
-                <div class="meta-item">
-                  <div class="k">Dataset type</div>
-                  <div class="v">{{ report.dataset_type }}</div>
-                </div>
-                <div class="meta-item">
-                  <div class="k">Total samples</div>
-                  <div class="v">{{ report.total_samples }}</div>
-                </div>
-                <div class="meta-item">
-                  <div class="k">Overall status</div>
-                  <div class="v status-{{ report.overall_status }}">{{ report.overall_status }}</div>
-                </div>
-                <div class="meta-item">
-                  <div class="k">Checks</div>
-                  <div class="v">{{ report.checks | length }}</div>
-                </div>
-                {% if report.dataset_path %}
-                <div class="meta-item" style="grid-column: 1 / -1;">
-                  <div class="k">Dataset path</div>
-                  <div class="v muted">{{ report.dataset_path }}</div>
-                </div>
-                {% endif %}
-              </div>
-
-              <div class="tiny-grid">
-                <div class="mini">
-                  <div class="k">Passed</div>
-                  <div class="v">{{ ns.ok }}</div>
-                </div>
-                <div class="mini">
-                  <div class="k">Warnings</div>
-                  <div class="v status-needs_attention">{{ ns.warning }}</div>
-                </div>
-                <div class="mini">
-                  <div class="k">Errors</div>
-                  <div class="v status-critical">{{ ns.error }}</div>
-                </div>
-                <div class="mini">
-                  <div class="k">Issue rate</div>
-                  <div class="v">
-                    {% if report.checks|length > 0 %}
-                      {{ (((ns.warning + ns.error) / (report.checks|length)) * 100) | round(0) }}%
-                    {% else %}
-                      0%
-                    {% endif %}
-                  </div>
-                </div>
-                <div class="mini">
-                  <div class="k">Pass rate</div>
-                  <div class="v">
-                    {% if report.checks|length > 0 %}
-                      {{ ((ns.ok / (report.checks|length)) * 100) | round(0) }}%
-                    {% else %}
-                      100%
-                    {% endif %}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-body">
-          <div class="graph-wrap">
-            <div class="graph-title">Issue distribution</div>
-            <div class="svg-card">
-              {% set total_checks = report.checks|length if report.checks|length > 0 else 1 %}
-              <svg viewBox="0 0 520 230" width="100%" height="auto" role="img" aria-label="Issue distribution graph">
-                <defs>
-                  <linearGradient id="okGradient" x1="0" x2="0" y1="0" y2="1">
-                    <stop offset="0%" stop-color="#34d399"></stop>
-                    <stop offset="100%" stop-color="#10b981"></stop>
-                  </linearGradient>
-                  <linearGradient id="warnGradient" x1="0" x2="0" y1="0" y2="1">
-                    <stop offset="0%" stop-color="#fbbf24"></stop>
-                    <stop offset="100%" stop-color="#f59e0b"></stop>
-                  </linearGradient>
-                  <linearGradient id="errGradient" x1="0" x2="0" y1="0" y2="1">
-                    <stop offset="0%" stop-color="#f87171"></stop>
-                    <stop offset="100%" stop-color="#ef4444"></stop>
-                  </linearGradient>
-                </defs>
-
-                <line x1="52" y1="180" x2="490" y2="180" stroke="rgba(148,163,184,0.16)" stroke-width="1" />
-                <line x1="52" y1="130" x2="490" y2="130" stroke="rgba(148,163,184,0.08)" stroke-width="1" />
-                <line x1="52" y1="80" x2="490" y2="80" stroke="rgba(148,163,184,0.08)" stroke-width="1" />
-                <line x1="52" y1="30" x2="490" y2="30" stroke="rgba(148,163,184,0.08)" stroke-width="1" />
-
-                {% set max_issue = [ns.ok, ns.warning, ns.error, 1] | max %}
-                {% set h_ok = (ns.ok / max_issue) * 130 %}
-                {% set h_warn = (ns.warning / max_issue) * 130 %}
-                {% set h_err = (ns.error / max_issue) * 130 %}
-
-                <rect x="100" y="{{ 180 - h_ok }}" width="70" height="{{ h_ok }}" rx="8" fill="url(#okGradient)"></rect>
-                <rect x="225" y="{{ 180 - h_warn }}" width="70" height="{{ h_warn }}" rx="8" fill="url(#warnGradient)"></rect>
-                <rect x="350" y="{{ 180 - h_err }}" width="70" height="{{ h_err }}" rx="8" fill="url(#errGradient)"></rect>
-
-                <text x="135" y="{{ 172 - h_ok }}" text-anchor="middle" fill="#e7edf7" font-size="13" font-family="Inter, sans-serif" font-weight="700">{{ ns.ok }}</text>
-                <text x="260" y="{{ 172 - h_warn }}" text-anchor="middle" fill="#e7edf7" font-size="13" font-family="Inter, sans-serif" font-weight="700">{{ ns.warning }}</text>
-                <text x="385" y="{{ 172 - h_err }}" text-anchor="middle" fill="#e7edf7" font-size="13" font-family="Inter, sans-serif" font-weight="700">{{ ns.error }}</text>
-
-                <text x="135" y="205" text-anchor="middle" fill="#94a3b8" font-size="12" font-family="Inter, sans-serif">OK</text>
-                <text x="260" y="205" text-anchor="middle" fill="#94a3b8" font-size="12" font-family="Inter, sans-serif">Warnings</text>
-                <text x="385" y="205" text-anchor="middle" fill="#94a3b8" font-size="12" font-family="Inter, sans-serif">Errors</text>
-              </svg>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <details class="section" id="distributions" open>
-      <summary class="section-head">
+  <main class="max-w-7xl mx-auto px-4 py-8">
+    <section id="overviewPage" class="page-view block space-y-6">
+      
+      <div class="p-5 border border-gray-200 dark:border-darkBorder bg-white dark:bg-darkCard rounded-xl shadow-sm flex flex-wrap items-start justify-between gap-4">
         <div>
-          <div class="head-title">Distributions</div>
-          <div class="head-sub">Class, split, and issue summaries</div>
+          <h1 class="text-2xl font-bold">Dataset Report</h1>
+          <div class="text-xs text-gray-500 mt-1 flex items-center gap-2">
+            <span class="uppercase tracking-wider font-semibold text-gray-700 dark:text-gray-300">{{ report.dataset_type }}</span> &bull; 
+            <span>{{ report.total_samples }} samples</span> &bull;
+            <span id="generatedAt"></span>
+          </div>
         </div>
-        <span class="count">
-          {% set views = 1 %}
-          {% if report.class_counts and report.class_counts|length > 0 %}{% set views = views + 1 %}{% endif %}
-          {% if report.split_counts and report.split_counts|length > 0 %}{% set views = views + 1 %}{% endif %}
-          {{ views }} views
+        <span class="px-3 py-1 text-xs font-bold rounded-full uppercase border 
+          {% if report.overall_status in ['healthy', 'ok'] %} bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800
+          {% elif report.overall_status in ['acceptable', 'warning', 'needs_attention'] %} bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800
+          {% else %} bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800 {% endif %}">
+          {{ report.overall_status|replace('_', ' ') }}
         </span>
-        <span class="chev">⌄</span>
-      </summary>
-      <div class="section-body">
-        {% if report.class_counts and report.class_counts|length > 0 %}
-        <div class="graph-wrap">
-          <div class="dist-head">
-            <div class="graph-title">Class distribution</div>
-
-            <div class="view-toggle" aria-label="Distribution view toggle">
-              <button type="button" class="active distribution-graph-btn" onclick="setDistributionView('graph')">
-                Graph
-              </button>
-              <button type="button" class="distribution-json-btn" onclick="setDistributionView('json')">
-                JSON
-              </button>
-            </div>
-          </div>
-
-          {% set sorted_classes = report.class_counts|dictsort %}
-          {% set graph_max = report.class_counts.values() | max %}
-          {% set class_bar_w = 42 %}
-          {% set class_gap = 18 %}
-          {% set class_chart_w = 120 + ((sorted_classes|length) * (class_bar_w + class_gap)) + 60 %}
-
-          <div id="classGraphView" class="class-view active">
-            <div class="svg-card" style="margin-top: 10px;">
-              <div class="chart-scroller">
-                <svg class="chart-svg" viewBox="0 0 {{ class_chart_w }} 340" width="{{ class_chart_w }}" height="340" role="img" aria-label="Class distribution vertical bar chart">
-                  <defs>
-                    <linearGradient id="verticalClassGradient" x1="0" x2="0" y1="0" y2="1">
-                      <stop offset="0%" stop-color="#60a5fa"></stop>
-                      <stop offset="100%" stop-color="#818cf8"></stop>
-                    </linearGradient>
-                  </defs>
-
-                  <line x1="80" y1="280" x2="{{ class_chart_w - 30 }}" y2="280" stroke="rgba(148,163,184,0.16)" stroke-width="1"></line>
-                  <line x1="80" y1="210" x2="{{ class_chart_w - 30 }}" y2="210" stroke="rgba(148,163,184,0.08)" stroke-width="1"></line>
-                  <line x1="80" y1="140" x2="{{ class_chart_w - 30 }}" y2="140" stroke="rgba(148,163,184,0.08)" stroke-width="1"></line>
-                  <line x1="80" y1="70" x2="{{ class_chart_w - 30 }}" y2="70" stroke="rgba(148,163,184,0.08)" stroke-width="1"></line>
-
-                  {% set class_left = 100 %}
-                  {% set class_max_h = 190 %}
-
-                  {% for label, count in sorted_classes %}
-                    {% set x = class_left + (loop.index0 * (class_bar_w + class_gap)) %}
-                    {% set h = (count / graph_max) * class_max_h %}
-                    {% set y = 280 - h %}
-                    {% set short_label = label[:10] ~ ('…' if label|length > 10 else '') %}
-
-                    <g>
-                      <title>{{ label }}: {{ count }}</title>
-                      <rect x="{{ x }}" y="{{ y }}" width="{{ class_bar_w }}" height="{{ h }}" rx="10" fill="url(#verticalClassGradient)"></rect>
-
-                      <text x="{{ x + (class_bar_w / 2) }}" y="{{ y - 8 }}" text-anchor="middle"
-                            fill="#e7edf7" font-size="11" font-family="Inter, sans-serif" font-weight="700">
-                        {{ count }}
-                      </text>
-
-                      <text x="{{ x + (class_bar_w / 2) }}" y="305" text-anchor="middle"
-                            fill="#94a3b8" font-size="10" font-family="Inter, sans-serif">
-                        {{ short_label }}
-                      </text>
-                    </g>
-                  {% endfor %}
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div id="classJsonView" class="class-view">
-            <div class="code-wrap">
-              <button type="button" class="copy-btn" onclick="copyCode(this)">Copy</button>
-              <pre class="code-block">{{ report.class_counts | tojson(indent=2) }}</pre>
-            </div>
-          </div>
-        </div>
-        {% endif %}
-
-        {% if report.split_counts and report.split_counts|length > 0 %}
-        <div class="graph-wrap">
-          <div class="dist-head">
-            <div class="graph-title" style="margin-top: 12px;">Split distribution</div>
-
-            <div class="view-toggle" aria-label="Distribution view toggle">
-              <button type="button" class="active distribution-graph-btn" onclick="setDistributionView('graph')">
-                Graph
-              </button>
-              <button type="button" class="distribution-json-btn" onclick="setDistributionView('json')">
-                JSON
-              </button>
-            </div>
-          </div>
-
-          {% set sorted_splits = report.split_counts|dictsort %}
-          {% set max_split = report.split_counts.values() | max %}
-          {% set split_bar_w = 84 %}
-          {% set split_gap = 34 %}
-          {% set split_chart_w = 120 + ((sorted_splits|length) * (split_bar_w + split_gap)) + 60 %}
-
-          <div id="splitGraphView" class="split-view active">
-            <div class="svg-card">
-              <div class="chart-scroller">
-                <svg class="chart-svg" viewBox="0 0 {{ split_chart_w }} 340" width="{{ split_chart_w }}" height="340" role="img" aria-label="Split distribution vertical bar chart">
-                  <defs>
-                    <linearGradient id="splitVerticalGradient" x1="0" x2="0" y1="0" y2="1">
-                      <stop offset="0%" stop-color="#93c5fd"></stop>
-                      <stop offset="100%" stop-color="#60a5fa"></stop>
-                    </linearGradient>
-                  </defs>
-
-                  <line x1="80" y1="280" x2="{{ split_chart_w - 30 }}" y2="280" stroke="rgba(148,163,184,0.16)" stroke-width="1"></line>
-                  <line x1="80" y1="210" x2="{{ split_chart_w - 30 }}" y2="210" stroke="rgba(148,163,184,0.08)" stroke-width="1"></line>
-                  <line x1="80" y1="140" x2="{{ split_chart_w - 30 }}" y2="140" stroke="rgba(148,163,184,0.08)" stroke-width="1"></line>
-                  <line x1="80" y1="70" x2="{{ split_chart_w - 30 }}" y2="70" stroke="rgba(148,163,184,0.08)" stroke-width="1"></line>
-
-                  {% set split_left = 100 %}
-                  {% set split_max_h = 190 %}
-
-                  {% for split, count in sorted_splits %}
-                    {% set x = split_left + (loop.index0 * (split_bar_w + split_gap)) %}
-                    {% set h = (count / max_split) * split_max_h %}
-                    {% set y = 280 - h %}
-
-                    <g>
-                      <title>{{ split }}: {{ count }}</title>
-                      <rect x="{{ x }}" y="{{ y }}" width="{{ split_bar_w }}" height="{{ h }}" rx="10" fill="url(#splitVerticalGradient)"></rect>
-
-                      <text x="{{ x + (split_bar_w / 2) }}" y="{{ y - 8 }}" text-anchor="middle"
-                            fill="#e7edf7" font-size="11" font-family="Inter, sans-serif" font-weight="700">
-                        {{ count }}
-                      </text>
-
-                      <text x="{{ x + (split_bar_w / 2) }}" y="305" text-anchor="middle"
-                            fill="#94a3b8" font-size="11" font-family="Inter, sans-serif">
-                        {{ split }}
-                      </text>
-                    </g>
-                  {% endfor %}
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div id="splitJsonView" class="split-view">
-            <div class="code-wrap">
-              <button type="button" class="copy-btn" onclick="copyCode(this)">Copy</button>
-              <pre class="code-block">{{ report.split_counts | tojson(indent=2) }}</pre>
-            </div>
-          </div>
-        </div>
-        {% endif %}
       </div>
-    </details>
 
-    <details class="section" id="priorities" open>
-      <summary class="section-head">
-        <div>
-          <div class="head-title">What to fix first</div>
-          <div class="head-sub">A short prioritized list of non-OK findings</div>
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+        <div class="col-span-1 md:col-span-4 p-5 border border-gray-200 dark:border-darkBorder bg-white dark:bg-darkCard rounded-xl shadow-sm flex flex-col items-center justify-center min-h-[260px]">
+          <div class="relative w-40 h-40 flex items-center justify-center">
+            <svg class="absolute inset-0 w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="40" fill="none" class="stroke-gray-200 dark:stroke-slate-700" stroke-width="8" />
+              <circle cx="50" cy="50" r="40" fill="none" stroke="{% if report.health_score >= 85 %}#22c55e{% elif report.health_score >= 60 %}#eab308{% else %}#ef4444{% endif %}" stroke-width="8" stroke-dasharray="251.2" stroke-dashoffset="{{ 251.2 - (251.2 * report.health_score / 100) }}" class="transition-all duration-1000 ease-out" />
+            </svg>
+            <div class="text-center mt-2">
+              <div class="text-4xl font-extrabold">{{ report.health_score }}</div>
+              <div class="text-xs text-gray-500">/ 100</div>
+            </div>
+          </div>
         </div>
-        <span class="count">{{ ns.warning + ns.error }}</span>
-        <span class="chev">⌄</span>
-      </summary>
-      <div class="section-body">
-        <div class="priority-list">
-          {% set issue_ns = namespace(count=0) %}
-          {% for c in report.checks %}
-            {% if c.status != 'ok' %}
-              {% set issue_ns.count = issue_ns.count + 1 %}
-              <div class="priority-item {{ c.status }}">
-                <div class="priority-top">
-                  <strong>{{ c.name }}</strong>
-                  <span class="badge badge-{{ c.status }}">{{ c.status }}</span>
+
+        <div class="col-span-1 md:col-span-8 grid grid-cols-2 lg:grid-cols-3 gap-4">
+          <div class="p-4 border border-gray-200 dark:border-darkBorder bg-gray-50 dark:bg-slate-800/50 rounded-lg">
+            <div class="text-xs text-gray-500 mb-1">Total Checks</div>
+            <div class="text-2xl font-bold">{{ report.checks|length }}</div>
+          </div>
+          <div class="p-4 border border-gray-200 dark:border-darkBorder bg-gray-50 dark:bg-slate-800/50 rounded-lg">
+            <div class="text-xs text-gray-500 mb-1">Passed</div>
+            <div class="text-2xl font-bold text-success">{{ ns.ok }}</div>
+          </div>
+          <div class="p-4 border border-gray-200 dark:border-darkBorder bg-gray-50 dark:bg-slate-800/50 rounded-lg">
+            <div class="text-xs text-gray-500 mb-1">Warnings</div>
+            <div class="text-2xl font-bold text-warning">{{ ns.warning }}</div>
+          </div>
+          <div class="p-4 border border-gray-200 dark:border-darkBorder bg-gray-50 dark:bg-slate-800/50 rounded-lg">
+            <div class="text-xs text-gray-500 mb-1">Errors</div>
+            <div class="text-2xl font-bold text-error">{{ ns.error }}</div>
+          </div>
+          <div class="p-4 border border-gray-200 dark:border-darkBorder bg-gray-50 dark:bg-slate-800/50 rounded-lg">
+            <div class="text-xs text-gray-500 mb-1">Pass Rate</div>
+            <div class="text-2xl font-bold text-success">{{ ((ns.ok / total_checks) * 100)|round(1) }}%</div>
+          </div>
+          <div class="p-4 border border-gray-200 dark:border-darkBorder bg-gray-50 dark:bg-slate-800/50 rounded-lg">
+            <div class="text-xs text-gray-500 mb-1">Issue Rate</div>
+            <div class="text-2xl font-bold text-error">{{ (((ns.warning + ns.error) / total_checks) * 100)|round(1) }}%</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="col-span-2 p-5 border border-gray-200 dark:border-darkBorder bg-white dark:bg-darkCard rounded-xl shadow-sm">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-bold text-lg">What to Fix First</h3>
+            <button onclick="downloadCSV()" class="px-3 py-1.5 text-xs bg-gray-200 dark:bg-slate-800 hover:bg-gray-300 dark:hover:bg-slate-700 rounded-md font-semibold transition">Export Issues to CSV</button>
+          </div>
+          <div class="space-y-3">
+            {% set has_fix = namespace(v=false) %}
+            {% for c in report.checks if c.status != 'ok' %}
+              {% set has_fix.v = true %}
+              <div class="p-4 border border-gray-200 dark:border-darkBorder bg-gray-50 dark:bg-slate-800/30 rounded-lg transition hover:shadow-md">
+                <div class="flex items-center gap-2 mb-2">
+                  <span class="px-2 py-0.5 text-[10px] font-bold rounded-md uppercase 
+                    {% if c.status == 'warning' %}bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400
+                    {% else %}bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400{% endif %}">{{ c.status }}</span>
+                  <span class="font-semibold text-sm capitalize">{{ c.name|replace('_', ' ') }}</span>
                 </div>
-                <div class="muted">{{ c.summary }}</div>
-                {% if c.suggestions %}
-                <ul class="suggest">
-                  {% for s in c.suggestions[:4] %}
-                  <li>{{ s }}</li>
-                  {% endfor %}
-                </ul>
+                <div class="text-xs text-gray-600 dark:text-gray-400 mb-2">{{ c.summary }}</div>
+                {% if c.suggestions and c.suggestions|length > 0 %}
+                  <div class="text-[11px] text-primary font-medium">&rarr; {{ c.suggestions[0] }}</div>
                 {% endif %}
               </div>
+            {% endfor %}
+            {% if not has_fix.v %}
+              <div class="text-sm text-gray-500 italic">No immediate fixes needed. Dataset looks healthy!</div>
             {% endif %}
-          {% endfor %}
-
-          {% if issue_ns.count == 0 %}
-          <div class="priority-item">
-            <div class="priority-top">
-              <strong>No immediate fixes needed</strong>
-              <span class="badge badge-ok">ok</span>
-            </div>
-            <div class="muted">All checks are currently OK.</div>
           </div>
+        </div>
+        
+        <div class="col-span-1 p-5 border border-gray-200 dark:border-darkBorder bg-white dark:bg-darkCard rounded-xl shadow-sm">
+          <h3 class="font-bold text-lg mb-4">Issue Distribution</h3>
+          <div class="h-[250px] w-full flex items-center justify-center">
+            <canvas id="issueChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <section id="distributionPage" class="page-view hidden space-y-6">
+      
+      <div class="flex items-center justify-between">
+        <h2 class="text-xl font-bold">Data Distribution</h2>
+        <div class="flex bg-gray-100 dark:bg-slate-800 p-1 rounded-lg">
+          <button class="dist-btn active px-3 py-1 text-xs font-semibold rounded-md" data-view="graph" onclick="toggleDistView('graph')">Graph</button>
+          <button class="dist-btn px-3 py-1 text-xs font-semibold rounded-md text-gray-500" data-view="json" onclick="toggleDistView('json')">JSON</button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 gap-6">
+        <div class="p-5 border border-gray-200 dark:border-darkBorder bg-white dark:bg-darkCard rounded-xl shadow-sm">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="font-bold">Class Distribution</h3>
+            <span class="text-xs font-medium text-gray-500 bg-gray-100 dark:bg-slate-800 px-2 py-1 rounded">{{ report.class_counts|length }} classes</span>
+          </div>
+          {% if report.class_counts %}
+            <div id="classGraphView" class="dist-pane block">
+               <div class="w-full overflow-x-auto h-[350px]">
+                 <div class="min-w-[600px] h-full relative">
+                   <canvas id="classChart"></canvas>
+                 </div>
+               </div>
+            </div>
+            <div id="classJsonView" class="dist-pane hidden relative">
+              <button onclick="navigator.clipboard.writeText(this.nextElementSibling.innerText)" class="absolute top-2 right-2 px-2 py-1 bg-gray-200 dark:bg-slate-700 rounded text-xs">Copy</button>
+              <pre class="bg-gray-50 dark:bg-slate-900 p-4 rounded-lg border border-gray-200 dark:border-darkBorder text-xs overflow-auto max-h-[300px] text-gray-800 dark:text-gray-300">{{ report.class_counts|tojson(indent=2) }}</pre>
+            </div>
+          {% else %}
+            <div class="text-sm text-gray-500">No class documentation available.</div>
+          {% endif %}
+        </div>
+        
+        <div class="p-5 border border-gray-200 dark:border-darkBorder bg-white dark:bg-darkCard rounded-xl shadow-sm">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="font-bold">Split Distribution</h3>
+            <span class="text-xs font-medium text-gray-500 bg-gray-100 dark:bg-slate-800 px-2 py-1 rounded">{{ report.split_counts|length }} splits</span>
+          </div>
+          {% if report.split_counts %}
+            <div id="splitGraphView" class="dist-pane block">
+               <div class="w-full h-[250px]">
+                 <canvas id="splitChart"></canvas>
+               </div>
+            </div>
+            <div id="splitJsonView" class="dist-pane hidden relative">
+              <button onclick="navigator.clipboard.writeText(this.nextElementSibling.innerText)" class="absolute top-2 right-2 px-2 py-1 bg-gray-200 dark:bg-slate-700 rounded text-xs">Copy</button>
+              <pre class="bg-gray-50 dark:bg-slate-900 p-4 rounded-lg border border-gray-200 dark:border-darkBorder text-xs overflow-auto max-h-[300px] text-gray-800 dark:text-gray-300">{{ report.split_counts|tojson(indent=2) }}</pre>
+            </div>
+          {% else %}
+            <div class="text-sm text-gray-500">No split documentation available.</div>
           {% endif %}
         </div>
       </div>
-    </details>
+    </section>
 
-    <details class="section" id="checks" open>
-      <summary class="section-head">
-        <div>
-          <div class="head-title">Checks</div>
-          <div class="head-sub">Structured details, long values, groups, pairs, and suggestions</div>
-        </div>
-        <span class="count">{{ report.checks | length }}</span>
-        <span class="chev">⌄</span>
-      </summary>
-      <div class="section-body">
-        <div class="checks-wrap">
+    <section id="checksPage" class="page-view hidden space-y-6">
+      
+      <div class="overflow-x-auto pb-2">
+        <div class="inline-flex gap-2 p-1 bg-gray-100 dark:bg-slate-800 rounded-lg">
           {% for c in report.checks %}
-          <details class="check" {% if c.status != 'ok' %}open{% endif %}>
-            <summary class="check-head">
-              <div>
-                <div class="head-title">{{ c.name }}</div>
-                <div class="head-sub">{{ c.summary }}</div>
-              </div>
-              <span class="badge badge-{{ c.status }}">{{ c.status }}</span>
-              <span class="chev">⌄</span>
-            </summary>
-            <div class="check-body">
-              {% if c.suggestions %}
-              <div class="detail-box" style="margin-top: 10px;">
-                <div class="label">Suggestions</div>
-                <ul class="suggest">
-                  {% for s in c.suggestions %}
-                  <li>{{ s }}</li>
-                  {% endfor %}
-                </ul>
-              </div>
-              {% endif %}
-
-              {% if c.details %}
-              <div class="detail-grid">
-                {% for key, value in c.details.items() %}
-                  {% if key != 'candidates' and key != 'groups' and key != 'pair_examples' %}
-                  <div class="detail-box">
-                    <div class="label">{{ key | replace('_', ' ') }}</div>
-                    {% if value is mapping %}
-                      <div class="code-wrap">
-                        <button type="button" class="copy-btn" onclick="copyCode(this)">Copy</button>
-                        <pre class="code-block">{{ value | tojson(indent=2) }}</pre>
-                      </div>
-                    {% elif value is sequence and value is not string %}
-                      {% if value|length > 0 and value|length <= 8 %}
-                        <div class="chips">
-                          {% for item in value %}
-                          <span class="chip">{{ item }}</span>
-                          {% endfor %}
-                        </div>
-                      {% else %}
-                        <div class="code-wrap">
-                          <button type="button" class="copy-btn" onclick="copyCode(this)">Copy</button>
-                          <pre class="code-block">{{ value | tojson(indent=2) }}</pre>
-                        </div>
-                      {% endif %}
-                    {% else %}
-                      <div class="value">{{ value }}</div>
-                    {% endif %}
-                  </div>
-                  {% endif %}
-                {% endfor %}
-              </div>
-              {% endif %}
-
-              {% if c.name == 'label_hints' and c.details and c.details.candidates %}
-              <div class="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Sample</th>
-                      <th>Current label</th>
-                      <th>Suspected label</th>
-                      <th>Score</th>
-                      <th>Reason</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {% for cand in c.details.candidates[:10] %}
-                    <tr>
-                      <td><strong>{{ cand.sample_id }}</strong></td>
-                      <td>{{ cand.current_label }}</td>
-                      <td>{{ cand.suspected_label }}</td>
-                      <td>{{ cand.score }}</td>
-                      <td class="muted">{{ cand.reason }}</td>
-                    </tr>
-                    {% endfor %}
-                  </tbody>
-                </table>
-              </div>
-              {% endif %}
-
-              {% if c.name != 'label_hints' and c.details and c.details.groups %}
-              <div class="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Group</th>
-                      <th>Members</th>
-                      <th>Count</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {% for group in c.details.groups[:10] %}
-                    <tr>
-                      <td><strong>#{{ loop.index }}</strong></td>
-                      <td class="muted">{{ group | join(', ') }}</td>
-                      <td>{{ group | length }}</td>
-                    </tr>
-                    {% endfor %}
-                  </tbody>
-                </table>
-              </div>
-              {% endif %}
-
-              {% if c.details and c.details.pair_examples %}
-              <div class="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>A</th>
-                      <th>B</th>
-                      <th>Distance</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {% for pair in c.details.pair_examples[:12] %}
-                    <tr>
-                      <td class="muted">{{ pair.id_a }}</td>
-                      <td class="muted">{{ pair.id_b }}</td>
-                      <td>{{ pair.distance }}</td>
-                    </tr>
-                    {% endfor %}
-                  </tbody>
-                </table>
-              </div>
-              {% endif %}
-            </div>
-          </details>
+            <button class="check-tab-btn flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-md whitespace-nowrap transition {% if loop.first %}bg-white dark:bg-darkBorder shadow-sm text-primary{% else %}text-gray-600 dark:text-gray-400{% endif %}" data-target="panel-{{ loop.index0 }}" onclick="openCheck('panel-{{ loop.index0 }}', this)">
+              <span class="w-2 h-2 rounded-full {% if c.status=='ok' %}bg-success{% elif c.status=='warning' %}bg-warning{% else %}bg-error{% endif %}"></span>
+              {{ c.name }}
+            </button>
           {% endfor %}
         </div>
       </div>
-    </details>
 
-    <footer>Generated by MLSanity • minimal dark report</footer>
-  </div>
+      {% for c in report.checks %}
+        <div id="panel-{{ loop.index0 }}" class="check-panel {% if loop.first %}block{% else %}hidden{% endif %} space-y-6">
+          <div class="p-5 border border-gray-200 dark:border-darkBorder bg-white dark:bg-darkCard rounded-xl shadow-sm">
+            <div class="flex items-center gap-3 mb-2">
+              <h3 class="text-lg font-bold capitalize">{{ c.name|replace('_', ' ') }}</h3>
+              <span class="px-2 py-0.5 text-xs font-bold rounded-full uppercase border 
+                  {% if c.status == 'ok' %} bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800
+                  {% elif c.status == 'warning' %} bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800
+                  {% else %} bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800 {% endif %}">
+                  {{ c.status }}
+              </span>
+            </div>
+            <p class="text-sm text-gray-600 dark:text-gray-400">{{ c.summary }}</p>
+            {% if c.suggestions %}
+              <div class="mt-4 pt-3 border-t border-gray-100 dark:border-darkBorder space-y-1">
+                <div class="text-xs uppercase font-bold text-gray-400 mb-2">Suggestions</div>
+                {% for s in c.suggestions %}
+                  <div class="text-xs text-primary font-medium">&rarr; {{ s }}</div>
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
+          
+          {% if c.name == 'label_hints' and c.details and c.details.candidates %}
+            <div class="p-5 border border-gray-200 dark:border-darkBorder bg-white dark:bg-darkCard rounded-xl shadow-sm overflow-hidden">
+              <h3 class="font-bold mb-4">Suspicious Samples</h3>
+              <div id="gridjs-wrapper-{{ loop.index0 }}" class="w-full text-sm"></div>
+            </div>
+          {% endif %}
+
+          {% if c.details %}
+            <div class="p-5 border border-gray-200 dark:border-darkBorder bg-white dark:bg-darkCard rounded-xl shadow-sm relative">
+              <h3 class="font-bold mb-4 text-sm uppercase tracking-wider text-gray-500">Raw Details</h3>
+              <button onclick="navigator.clipboard.writeText(this.nextElementSibling.innerText)" class="absolute top-5 right-5 px-3 py-1 bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 transition rounded text-xs font-semibold">Copy JSON</button>
+              <pre class="bg-gray-50 dark:bg-slate-900 p-4 rounded-lg border border-gray-200 dark:border-darkBorder text-xs overflow-auto max-h-[400px] text-gray-800 dark:text-gray-300">{{ c.details|tojson(indent=2) }}</pre>
+            </div>
+          {% endif %}
+        </div>
+      {% endfor %}
+
+    </section>
+  </main>
+
+  <script>
+    // Tab tracking
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.nav-btn').forEach(b => {
+          b.classList.remove('active', 'text-primary', 'bg-white', 'dark:bg-slate-800', 'shadow-sm');
+          b.classList.add('text-gray-600', 'hover:bg-gray-100');
+        });
+        btn.classList.remove('text-gray-600', 'hover:bg-gray-100');
+        btn.classList.add('active', 'text-primary', 'bg-white', 'dark:bg-slate-800', 'shadow-sm');
+        
+        document.querySelectorAll('.page-view').forEach(p => p.classList.add('hidden'));
+        document.getElementById(btn.dataset.target).classList.remove('hidden');
+      });
+    });
+
+    // Dark mode toggle
+    const themeToggle = document.getElementById('themeToggle');
+    const htmlElem = document.documentElement;
+    themeToggle.addEventListener('click', () => {
+      htmlElem.classList.toggle('dark');
+      Chart.helpers.each(Chart.instances, function(instance){
+        instance.options.color = htmlElem.classList.contains('dark') ? '#cbd5e1' : '#475569';
+        instance.update();
+      });
+    });
+
+    // Sub-tab toggling for Distribution
+    window.toggleDistView = function(view) {
+      document.querySelectorAll('.dist-btn').forEach(b => {
+        if(b.dataset.view === view) {
+          b.classList.add('bg-white', 'dark:bg-darkCard', 'shadow-sm', 'text-gray-900', 'dark:text-white');
+          b.classList.remove('text-gray-500');
+        } else {
+          b.classList.remove('bg-white', 'dark:bg-darkCard', 'shadow-sm', 'text-gray-900', 'dark:text-white');
+          b.classList.add('text-gray-500');
+        }
+      });
+      document.querySelectorAll('.dist-pane').forEach(p => p.classList.add('hidden'));
+      document.getElementById('class' + view.charAt(0).toUpperCase() + view.slice(1) + 'View').classList.remove('hidden');
+      if (document.getElementById('split' + view.charAt(0).toUpperCase() + view.slice(1) + 'View')) {
+        document.getElementById('split' + view.charAt(0).toUpperCase() + view.slice(1) + 'View').classList.remove('hidden');
+      }
+    };
+
+    // Sub-tab toggling for Checks
+    window.openCheck = function(target, el) {
+      document.querySelectorAll('.check-tab-btn').forEach(b => {
+        b.classList.remove('bg-white', 'dark:bg-darkBorder', 'shadow-sm', 'text-primary');
+        b.classList.add('text-gray-600', 'dark:text-gray-400');
+      });
+      el.classList.add('bg-white', 'dark:bg-darkBorder', 'shadow-sm', 'text-primary');
+      el.classList.remove('text-gray-600', 'dark:text-gray-400');
+      document.querySelectorAll('.check-panel').forEach(p => p.classList.add('hidden'));
+      document.getElementById(target).classList.remove('hidden');
+    };
+
+    // Chart.js integrations
+    document.addEventListener("DOMContentLoaded", () => {
+      const textColor = document.documentElement.classList.contains('dark') ? '#cbd5e1' : '#475569';
+      Chart.defaults.color = textColor;
+      Chart.defaults.font.family = 'Inter, system-ui, sans-serif';
+
+      // 1. Issue Distribution Chart
+      const issueCtx = document.getElementById('issueChart');
+      if (issueCtx) {
+        new Chart(issueCtx, {
+          type: 'doughnut',
+          data: {
+            labels: ['Passed', 'Warnings', 'Errors'],
+            datasets: [{
+              data: [{{ ns.ok }}, {{ ns.warning }}, {{ ns.error }}],
+              backgroundColor: ['#22c55e', '#eab308', '#ef4444'],
+              borderWidth: 0,
+              hoverOffset: 4
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom' } },
+            cutout: '75%'
+          }
+        });
+      }
+
+      // 2. Class Distribution
+      const classDataRaw = {{ report.class_counts|default({})|tojson(indent=2) }};
+      const classLabels = Object.keys(classDataRaw);
+      const classValues = Object.values(classDataRaw);
+      const classCtx = document.getElementById('classChart');
+      if (classCtx && classLabels.length > 0) {
+        new Chart(classCtx, {
+          type: 'bar',
+          data: {
+            labels: classLabels,
+            datasets: [{
+              label: 'Samples',
+              data: classValues,
+              backgroundColor: '#3b82f6',
+              borderRadius: 4
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              y: { beginAtZero: true, grid: { color: 'rgba(156, 163, 175, 0.1)' } },
+              x: { grid: { display: false } }
+            }
+          }
+        });
+      }
+
+      // 3. Split Distribution
+      const splitDataRaw = {{ report.split_counts|default({})|tojson(indent=2) }};
+      const splitLabels = Object.keys(splitDataRaw);
+      const splitValues = Object.values(splitDataRaw);
+      const splitCtx = document.getElementById('splitChart');
+      if (splitCtx && splitLabels.length > 0) {
+        new Chart(splitCtx, {
+          type: 'bar',
+          data: {
+            labels: splitLabels,
+            datasets: [{
+              label: 'Samples',
+              data: splitValues,
+              backgroundColor: '#22c55e',
+              borderRadius: 4
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              y: { beginAtZero: true, grid: { color: 'rgba(156, 163, 175, 0.1)' } },
+              x: { grid: { display: false } }
+            }
+          }
+        });
+      }
+
+      // 4. Grid.js for tables
+      {% for c in report.checks %}
+        {% if c.name == 'label_hints' and c.details and c.details.candidates %}
+          const tableData{{ loop.index0 }} = [
+            {% for cand in c.details.candidates %}
+              ["{{ cand.sample_id }}", "{{ cand.current_label }}", "{{ cand.suspected_label }}", {{ cand.score|round(3) }}, "{{ cand.reason }}"],
+            {% endfor %}
+          ];
+          new gridjs.Grid({
+            columns: ["Sample ID", "Current Label", "Suspected Label", "Score", "Reason"],
+            data: tableData{{ loop.index0 }},
+            sort: true,
+            search: true,
+            pagination: { enabled: true, limit: 10 },
+            className: {
+               table: 'w-full !border-0',
+               th: 'bg-gray-50 dark:bg-slate-800 text-xs text-gray-500 uppercase font-semibold border-b',
+               td: 'text-xs text-gray-700 dark:text-gray-300 border-b dark:border-darkBorder p-3'
+            }
+          }).render(document.getElementById("gridjs-wrapper-{{ loop.index0 }}"));
+        {% endif %}
+      {% endfor %}
+      
+      const genAt = document.getElementById("generatedAt");
+      if(genAt) genAt.innerText = new Date().toLocaleString();
+    });
+
+    window.downloadCSV = function() {
+      const rows = [["Check", "Status", "Summary", "Suggestions"]];
+      {% for c in report.checks if c.status != 'ok' %}
+        rows.push([
+          "{{ c.name }}", 
+          "{{ c.status }}", 
+          "{{ c.summary }}", 
+          "{% if c.suggestions %}{{ c.suggestions[0] }}{% endif %}"
+        ]);
+      {% endfor %}
+      let csvContent = "data:text/csv;charset=utf-8," 
+        + rows.map(e => e.map(cell => '"' + cell.replace(/"/g, '""') + '"').join(",")).join("\n");
+      var encodedUri = encodeURI(csvContent);
+      var link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", "mlsanity_issues.csv");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    };
+  </script>
 </body>
 </html>

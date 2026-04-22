@@ -201,6 +201,10 @@ def build_compare_report(old_report: Report, new_report: Report, dataset_type: s
     new_counts = _extract_class_counts(new_report)
     labels = sorted(set(old_counts) | set(new_counts))
     class_count_delta = {label: new_counts.get(label, 0) - old_counts.get(label, 0) for label in labels}
+    old_split_counts = old_report.split_counts
+    new_split_counts = new_report.split_counts
+    split_names = sorted(set(old_split_counts) | set(new_split_counts))
+    split_count_delta = {s: new_split_counts.get(s, 0) - old_split_counts.get(s, 0) for s in split_names}
 
     return CompareReport(
         dataset_type=dataset_type.strip().lower(),
@@ -215,6 +219,9 @@ def build_compare_report(old_report: Report, new_report: Report, dataset_type: s
         old_class_counts=old_counts,
         new_class_counts=new_counts,
         class_count_delta=class_count_delta,
+        old_split_counts=old_split_counts,
+        new_split_counts=new_split_counts,
+        split_count_delta=split_count_delta,
         check_deltas=check_deltas,
         introduced_regressions=introduced_regressions,
         resolved_issues=resolved_issues,

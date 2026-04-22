@@ -58,6 +58,9 @@ class CompareReport:
     old_class_counts: dict[str, int]
     new_class_counts: dict[str, int]
     class_count_delta: dict[str, int]
+    old_split_counts: dict[str, int]
+    new_split_counts: dict[str, int]
+    split_count_delta: dict[str, int]
     check_deltas: list[CompareCheckDelta]
     introduced_regressions: list[str] = field(default_factory=list)
     resolved_issues: list[str] = field(default_factory=list)

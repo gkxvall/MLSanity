@@ -1,104 +1,263 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>MLSanity — Compare report</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 24px; color: #1f2937; }
-    h1 { margin: 0 0 6px; }
-    .muted { color: #6b7280; margin: 0 0 20px; }
-    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin-bottom: 20px; }
-    .card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; }
-    .label { font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.04em; }
-    .value { font-size: 22px; font-weight: 600; margin-top: 6px; }
-    table { border-collapse: collapse; width: 100%; margin-top: 12px; }
-    th, td { border: 1px solid #e5e7eb; padding: 8px 10px; text-align: left; }
-    th { background: #f9fafb; }
-    .ok { color: #15803d; font-weight: 600; }
-    .warning { color: #b45309; font-weight: 600; }
-    .error { color: #b91c1c; font-weight: 600; }
-  </style>
+  <title>MLSanity — Compare Report</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: { extend: { colors: { primary: '#3b82f6', success: '#22c55e', warning: '#eab308', error: '#ef4444', darkBg: '#0f172a', darkCard: '#1e293b', darkBorder: '#334155' } } }
+    }
+  </script>
+  
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/gridjs/dist/theme/mermaid.min.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/gridjs/dist/gridjs.umd.js"></script>
 </head>
-<body>
-  <h1>MLSanity compare report</h1>
-  <p class="muted">{{ report.old_path }} → {{ report.new_path }}</p>
-
-  <div class="cards">
-    <div class="card">
-      <div class="label">Dataset type</div>
-      <div class="value">{{ report.dataset_type }}</div>
+<body class="bg-gray-50 text-gray-900 dark:bg-darkBg dark:text-gray-100 font-sans transition-colors duration-200">
+  
+  <header class="sticky top-0 z-50 border-b border-gray-200 dark:border-darkBorder bg-white/80 dark:bg-darkCard/80 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
+      <div class="flex items-center gap-3 font-bold text-sm tracking-tight">
+        <div class="w-7 h-7 rounded-md bg-primary text-white flex items-center justify-center">⚡</div>
+        <span>MLSanity</span>
+      </div>
+      <nav class="flex items-center gap-1 hidden sm:flex">
+        <button class="nav-btn active px-3 py-1.5 rounded-lg text-sm font-semibold text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800 transition" data-target="overviewPage">Overview</button>
+        <button class="nav-btn px-3 py-1.5 rounded-lg text-sm font-semibold text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800 transition" data-target="distributionPage">Distribution Changes</button>
+        <button class="nav-btn px-3 py-1.5 rounded-lg text-sm font-semibold text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800 transition" data-target="checksPage">Check Deltas</button>
+        <button class="nav-btn px-3 py-1.5 rounded-lg text-sm font-semibold text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800 transition" data-target="detailsPage">Details</button>
+      </nav>
+      <button id="themeToggle" class="p-2 rounded-lg bg-gray-200 dark:bg-slate-800 text-gray-600 dark:text-gray-300 text-xs font-bold">Toggle Mode</button>
     </div>
-    <div class="card">
-      <div class="label">Sample delta</div>
-      <div class="value">{{ report.total_samples_delta }}</div>
-    </div>
-    <div class="card">
-      <div class="label">Health delta</div>
-      <div class="value">{{ report.health_score_delta }}</div>
-    </div>
-  </div>
+  </header>
 
-  <h2>Class distribution (old vs new)</h2>
-  <table>
-    <thead>
-      <tr>
-        <th>Class</th>
-        <th>Old count</th>
-        <th>New count</th>
-        <th>Delta</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for item in report.new_class_counts|dictsort %}
-      <tr>
-        <td>{{ item[0] }}</td>
-        <td>{{ report.old_class_counts[item[0]] if report.old_class_counts[item[0]] is defined else 0 }}</td>
-        <td>{{ item[1] }}</td>
-        <td>{{ item[1] - (report.old_class_counts[item[0]] if report.old_class_counts[item[0]] is defined else 0) }}</td>
-      </tr>
-      {% endfor %}
-      {% for item in report.old_class_counts|dictsort %}
-      {% if report.new_class_counts[item[0]] is not defined %}
-      <tr>
-        <td>{{ item[0] }}</td>
-        <td>{{ item[1] }}</td>
-        <td>0</td>
-        <td>{{ 0 - item[1] }}</td>
-      </tr>
-      {% endif %}
-      {% endfor %}
-    </tbody>
-  </table>
+  {% set worsened = namespace(count=0) %}{% set improved = namespace(count=0) %}
+  {% for d in report.check_deltas %}
+    {% if d.issue_delta > 0 %}{% set worsened.count = worsened.count + 1 %}
+    {% elif d.issue_delta < 0 %}{% set improved.count = improved.count + 1 %}{% endif %}
+  {% endfor %}
 
-  <h2>Check deltas</h2>
-  <table>
-    <thead>
-      <tr>
-        <th>Check</th>
-        <th>Old status</th>
-        <th>New status</th>
-        <th>Old issues</th>
-        <th>New issues</th>
-        <th>Delta</th>
-      </tr>
-    </thead>
-    <tbody>
+  <main class="max-w-7xl mx-auto px-4 py-8">
+    <section id="overviewPage" class="page-view block space-y-6">
+      
+      <div class="p-5 border border-gray-200 dark:border-darkBorder bg-white dark:bg-darkCard rounded-xl shadow-sm">
+        <h1 class="text-2xl font-bold">Compare Report</h1>
+        <div class="text-xs text-gray-500 mt-1 uppercase tracking-wider font-semibold">{{ report.dataset_type }} &bull; old/new comparison</div>
+      </div>
+
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="p-4 border border-gray-200 dark:border-darkBorder bg-white dark:bg-darkCard rounded-lg shadow-sm">
+          <div class="text-xs text-gray-500 mb-1">Sample Delta</div>
+          <div class="text-3xl font-bold {% if report.total_samples_delta != 0 %}text-primary{% endif %}">{{ report.total_samples_delta }}</div>
+          <div class="text-xs text-gray-400 mt-2">{{ report.old_total_samples }} &rarr; {{ report.new_total_samples }}</div>
+        </div>
+        <div class="p-4 border border-gray-200 dark:border-darkBorder bg-white dark:bg-darkCard rounded-lg shadow-sm">
+          <div class="text-xs text-gray-500 mb-1">Health Delta</div>
+          <div class="text-3xl font-bold {% if report.health_score_delta > 0 %}text-success{% elif report.health_score_delta < 0 %}text-error{% endif %}">{{ "{0:+}0".format(report.health_score_delta) if report.health_score_delta != 0 else "0" }}</div>
+          <div class="text-xs text-gray-400 mt-2">{{ report.old_health_score }} &rarr; {{ report.new_health_score }}</div>
+        </div>
+        <div class="p-4 border border-gray-200 dark:border-darkBorder bg-white dark:bg-darkCard rounded-lg shadow-sm">
+          <div class="text-xs text-gray-500 mb-1">Worsened Checks</div>
+          <div class="text-3xl font-bold text-error">{{ worsened.count }}</div>
+        </div>
+        <div class="p-4 border border-gray-200 dark:border-darkBorder bg-white dark:bg-darkCard rounded-lg shadow-sm">
+          <div class="text-xs text-gray-500 mb-1">Improved Checks</div>
+          <div class="text-3xl font-bold text-success">{{ improved.count }}</div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="p-5 border border-gray-200 dark:border-darkBorder bg-white dark:bg-darkCard rounded-lg shadow-sm">
+           <div class="text-xs text-gray-500 mb-1 font-bold">Paths</div>
+           <div class="text-xs font-mono text-gray-600 dark:text-gray-300 mb-2 truncate" title="{{ report.old_path }}">Old: {{ report.old_path }}</div>
+           <div class="text-xs font-mono text-gray-600 dark:text-gray-300 truncate" title="{{ report.new_path }}">New: {{ report.new_path }}</div>
+        </div>
+        <div class="p-5 border border-gray-200 dark:border-darkBorder bg-white dark:bg-darkCard rounded-lg shadow-sm">
+           <div class="text-xs text-gray-500 mb-3 font-bold">Signals</div>
+           <div class="flex gap-2">
+             <span class="px-3 py-1 bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400 rounded-full text-xs font-bold border border-yellow-200 dark:border-yellow-800">
+               Introduced {{ report.introduced_regressions|length }}
+             </span>
+             <span class="px-3 py-1 bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 rounded-full text-xs font-bold border border-green-200 dark:border-green-800">
+               Resolved {{ report.resolved_issues|length }}
+             </span>
+           </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="distributionPage" class="page-view hidden space-y-6">
+      <div class="p-5 border border-gray-200 dark:border-darkBorder bg-white dark:bg-darkCard rounded-xl shadow-sm">
+        <div class="flex justify-between items-center mb-4">
+          <div>
+            <h3 class="font-bold text-lg">Class Delta</h3>
+            <div class="text-xs text-gray-500">Distribution changes between versions</div>
+          </div>
+        </div>
+        {% if report.class_count_delta %}
+          <div class="w-full overflow-x-auto h-[350px]">
+            <div class="min-w-[600px] h-full relative">
+              <canvas id="classDeltaChart"></canvas>
+            </div>
+          </div>
+        {% else %}
+          <div class="text-sm text-gray-500 italic">No class delta data available.</div>
+        {% endif %}
+      </div>
+    </section>
+
+    <section id="checksPage" class="page-view hidden space-y-6">
+      <div class="p-5 border border-gray-200 dark:border-darkBorder bg-white dark:bg-darkCard rounded-xl shadow-sm">
+         <div class="flex items-center justify-between mb-4">
+           <h3 class="font-bold text-lg">Check deltas</h3>
+           <button onclick="downloadDeltasCSV()" class="px-3 py-1.5 text-xs bg-gray-200 dark:bg-slate-800 hover:bg-gray-300 dark:hover:bg-slate-700 rounded-md font-semibold transition">Export Deltas</button>
+         </div>
+         <div id="gridjs-deltas-wrapper" class="w-full text-sm"></div>
+      </div>
+    </section>
+
+    <section id="detailsPage" class="page-view hidden space-y-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="p-5 border border-gray-200 dark:border-darkBorder bg-white dark:bg-darkCard rounded-lg shadow-sm">
+          <h3 class="font-bold mb-3 text-error">Introduced Issues</h3>
+          {% if report.introduced_regressions %}
+            <ul class="list-disc pl-5 space-y-1 text-sm text-gray-700 dark:text-gray-300">
+              {% for x in report.introduced_regressions %}<li>{{ x|replace('_', ' ')|title }}</li>{% endfor %}
+            </ul>
+          {% else %}
+            <div class="text-sm text-gray-500 italic">None</div>
+          {% endif %}
+        </div>
+        <div class="p-5 border border-gray-200 dark:border-darkBorder bg-white dark:bg-darkCard rounded-lg shadow-sm">
+          <h3 class="font-bold mb-3 text-success">Resolved Issues</h3>
+          {% if report.resolved_issues %}
+            <ul class="list-disc pl-5 space-y-1 text-sm text-gray-700 dark:text-gray-300">
+              {% for x in report.resolved_issues %}<li>{{ x|replace('_', ' ')|title }}</li>{% endfor %}
+            </ul>
+          {% else %}
+            <div class="text-sm text-gray-500 italic">None</div>
+          {% endif %}
+        </div>
+      </div>
+      
+      <div class="p-5 border border-gray-200 dark:border-darkBorder bg-white dark:bg-darkCard rounded-lg shadow-sm">
+        <h3 class="font-bold mb-4">Detailed Class Counts (Old vs New)</h3>
+        <div id="gridjs-classes-wrapper" class="w-full text-sm"></div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.nav-btn').forEach(b => {
+          b.classList.remove('active', 'text-primary', 'bg-gray-100', 'dark:bg-slate-800');
+          b.classList.add('text-gray-600', 'hover:bg-gray-100');
+        });
+        btn.classList.add('active', 'text-primary', 'bg-gray-100', 'dark:bg-slate-800');
+        btn.classList.remove('text-gray-600', 'hover:bg-gray-100');
+        document.querySelectorAll('.page-view').forEach(p => p.classList.add('hidden'));
+        document.getElementById(btn.dataset.target).classList.remove('hidden');
+      });
+    });
+
+    const themeToggle = document.getElementById('themeToggle');
+    const htmlElem = document.documentElement;
+    themeToggle.addEventListener('click', () => {
+      htmlElem.classList.toggle('dark');
+      Chart.helpers.each(Chart.instances, function(instance){
+        instance.options.color = htmlElem.classList.contains('dark') ? '#cbd5e1' : '#475569';
+        instance.update();
+      });
+    });
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const textColor = document.documentElement.classList.contains('dark') ? '#cbd5e1' : '#475569';
+      Chart.defaults.color = textColor;
+      Chart.defaults.font.family = 'Inter, system-ui, sans-serif';
+
+      const deltaDataRaw = {{ report.class_count_delta|default({})|tojson(indent=2) }};
+      const deltaLabels = Object.keys(deltaDataRaw);
+      const deltaValues = Object.values(deltaDataRaw);
+      
+      const deltaCtx = document.getElementById('classDeltaChart');
+      if (deltaCtx && deltaLabels.length > 0) {
+        new Chart(deltaCtx, {
+          type: 'bar',
+          data: {
+            labels: deltaLabels,
+            datasets: [{
+              label: 'Sample Delta',
+              data: deltaValues,
+              backgroundColor: deltaValues.map(val => val < 0 ? '#22c55e' : '#ef4444'),
+              borderRadius: 4
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              y: { grid: { color: 'rgba(156, 163, 175, 0.1)' } },
+              x: { grid: { display: false } }
+            }
+          }
+        });
+      }
+
+      const gridOptions = {
+        sort: true, search: true, pagination: { enabled: true, limit: 10 },
+        className: {
+          table: 'w-full !border-0',
+          th: 'bg-gray-50 dark:bg-slate-800 text-xs text-gray-500 uppercase font-semibold border-b',
+          td: 'text-xs text-gray-700 dark:text-gray-300 border-b dark:border-darkBorder p-3'
+        }
+      };
+
+      // Check Deltas Table
+      const deltasData = [
+        {% for d in report.check_deltas %}
+          ["{{ d.name|replace('_', ' ')|title }}", "{{ d.old_status }}", "{{ d.new_status }}", {{ d.old_issue_count }}, {{ d.new_issue_count }}, {{ d.issue_delta }}],
+        {% endfor %}
+      ];
+      new gridjs.Grid({
+        ...gridOptions,
+        columns: ["Check", "Old Status", "New Status", "Old Issues", "New Issues", "Issue Delta"],
+        data: deltasData
+      }).render(document.getElementById("gridjs-deltas-wrapper"));
+
+      // Detailed Classes Table
+      const classOldCounts = {{ report.old_class_counts|default({})|tojson(indent=2) }};
+      const classNewCounts = {{ report.new_class_counts|default({})|tojson(indent=2) }};
+      const classesData = [];
+      for (const label of deltaLabels) {
+        classesData.push([label, classOldCounts[label] || 0, classNewCounts[label] || 0, deltaDataRaw[label] || 0]);
+      }
+      new gridjs.Grid({
+        ...gridOptions,
+        columns: ["Class Label", "Old Dataset", "New Dataset", "Delta"],
+        data: classesData
+      }).render(document.getElementById("gridjs-classes-wrapper"));
+    });
+
+    window.downloadDeltasCSV = function() {
+      const rows = [["Check", "Old Status", "New Status", "Old Issues", "New Issues", "Delta"]];
       {% for d in report.check_deltas %}
-      <tr>
-        <td>{{ d.name }}</td>
-        <td class="{{ d.old_status }}">{{ d.old_status }}</td>
-        <td class="{{ d.new_status }}">{{ d.new_status }}</td>
-        <td>{{ d.old_issue_count }}</td>
-        <td>{{ d.new_issue_count }}</td>
-        <td>{{ d.issue_delta }}</td>
-      </tr>
+        rows.push(["{{ d.name }}", "{{ d.old_status }}", "{{ d.new_status }}", {{ d.old_issue_count }}, {{ d.new_issue_count }}, {{ d.issue_delta }}]);
       {% endfor %}
-    </tbody>
-  </table>
-
-  <h2>Regressions and resolutions</h2>
-  <p><strong>Introduced:</strong> {{ report.introduced_regressions | join(", ") if report.introduced_regressions else "none" }}</p>
-  <p><strong>Resolved:</strong> {{ report.resolved_issues | join(", ") if report.resolved_issues else "none" }}</p>
+      let csvContent = "data:text/csv;charset=utf-8," + rows.map(e => e.join(",")).join("\n");
+      var encodedUri = encodeURI(csvContent);
+      var link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", "mlsanity_compare_deltas.csv");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    };
+  </script>
 </body>
 </html>
